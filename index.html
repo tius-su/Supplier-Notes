@@ -92,26 +92,41 @@
       </div>
     </div>
 
-    <div class="modal fade" id="payment-modal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header"><h5 class="modal-title">Lakukan Pembayaran untuk Faktur <span id="payment-faktur-no"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-          <div class="modal-body">
-            <p>Sisa Tagihan Faktur Ini: <strong id="sisa-tagihan-payment" class="text-danger"></strong></p>
-            <form id="payment-form">
-                <input type="hidden" id="payment-transaksi-id">
-                <div class="mb-3"><label for="payment-date" class="form-label">Tanggal Bayar</label><input type="date" class="form-control" id="payment-date" required></div>
-                <div class="mb-3"><label for="payment-amount" class="form-label">Jumlah Bayar</label><input type="number" class="form-control" id="payment-amount" required></div>
-                <div class="mb-3"><label for="payment-type" class="form-label">Jenis Payment</label><select class="form-select" id="payment-type"><option value="Cash">Cash</option><option value="Transfer">Transfer</option><option value="Giro">Giro</option></select></div>
-                <div id="transfer-details" style="display: none;"><div class="mb-3"><input type="text" class="form-control" id="transfer-bank" placeholder="Contoh: BCA"></div></div>
-                <div id="giro-details" style="display: none;"><div class="mb-3"><input type="text" class="form-control" id="giro-no" placeholder="Nomor Giro"></div><div class="mb-3"><input type="date" class="form-control" id="giro-due-date"></div></div>
-                <button type="submit" class="btn btn-success w-100">Bayar</button>
-            </form>
-          </div>
-        </div>
+   <div class="modal fade" id="payment-modal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Lakukan Pembayaran untuk Faktur <span id="payment-faktur-no"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Sisa Tagihan Faktur Ini: <strong id="sisa-tagihan-payment" class="text-danger"></strong></p>
+        <form id="payment-form">
+            <input type="hidden" id="payment-transaksi-id">
+            <div class="mb-3">
+                 <label for="payment-date" class="form-label">Tanggal Bayar</label>
+                 <input type="date" class="form-control" id="payment-date" required>
+            </div>
+
+            <div id="payment-methods-container">
+                </div>
+
+            <button type="button" class="btn btn-outline-primary btn-sm w-100 my-3" id="add-payment-method-btn">
+                <i class="bi bi-plus-circle"></i> Tambah Metode Pembayaran Lain
+            </button>
+            
+            <hr>
+            <div class="d-flex justify-content-between fs-5 fw-bold">
+                <span>Total Pembayaran:</span>
+                <span id="total-payment-display">Rp 0</span>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 mt-3">Proses Pembayaran</button>
+        </form>
       </div>
     </div>
-
+  </div>
+</div>
     <div class="modal fade" id="report-modal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
