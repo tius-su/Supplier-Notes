@@ -212,11 +212,13 @@ window.addEventListener('DOMContentLoaded', () => {
             nama: document.getElementById('nama-dropdown').value, tanggal: document.getElementById('tanggal').value,
             noFaktur: document.getElementById('no-faktur').value, keterangan: document.getElementById('keterangan').value,
             jumlah: parseFloat(document.getElementById('jumlah').value), jatuhTempo: document.getElementById('jatuh-tempo').value,
-            retur: parseFloat(document.getElementById('retur').value) || 0, updatedAt: new Date()
+            retur: parseFloat(document.getElementById('retur').value) || 0, 
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
-        if (id) transactionCollection.doc(id).update(data).then(() => modalInstance.hide());
-        else {
+        if (id) {
+            transactionCollection.doc(id).update(data).then(() => modalInstance.hide());
+        } else {
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             transactionCollection.add(data).then(() => modalInstance.hide());
         }
@@ -270,24 +272,32 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // FUNGSI YANG DIPERBAIKI
     function saveContact(e) {
         e.preventDefault();
         const contactData = {
-            name: document.getElementById('contact-name').value, type: document.getElementById('contact-type').value,
-            phone: document.getElementById('contact-phone').value, email: document.getElementById('contact-email').value,
-            address: document.getElementById('contact-address').value, contactPerson: document.getElementById('contact-person').value,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Diubah ke serverTimestamp
+            name: document.getElementById('contact-name').value, 
+            type: document.getElementById('contact-type').value,
+            phone: document.getElementById('contact-phone').value, 
+            email: document.getElementById('contact-email').value,
+            address: document.getElementById('contact-address').value, 
+            contactPerson: document.getElementById('contact-person').value,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         const contactId = document.getElementById('contact-id').value;
         if (contactId) {
             contactsCollection.doc(contactId).update(contactData).then(() => {
                 document.getElementById('cancel-edit-contact-btn').click();
+            }).catch(err => {
+                console.error("Error updating contact: ", err);
+                alert("Gagal memperbarui kontak.");
             });
         } else {
-            contactData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); // Diubah ke serverTimestamp
+            contactData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             contactsCollection.add(contactData).then(() => {
                 document.getElementById('contact-form').reset();
+            }).catch(err => {
+                console.error("Error adding contact: ", err);
+                alert("Gagal menyimpan kontak baru.");
             });
         }
     }
@@ -307,7 +317,12 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     window.deleteContact = (id) => {
-        if (confirm('Yakin ingin menghapus kontak ini?')) contactsCollection.doc(id).delete();
+        if (confirm('Yakin ingin menghapus kontak ini?')) {
+            contactsCollection.doc(id).delete().catch(err => {
+                console.error("Error deleting contact: ", err);
+                alert("Gagal menghapus kontak.");
+            });
+        }
     }
 
     function formatCurrency(num) { return new Intl.NumberFormat('id-ID').format(num || 0); }
@@ -404,7 +419,7 @@ window.addEventListener('DOMContentLoaded', () => {
                             tanggal: row.Tanggal_Transaksi.toISOString().slice(0,10), noFaktur: row.No_Faktur || '',
                             keterangan: row.Keterangan || '', jumlah: parseFloat(row.Jumlah_Faktur) || 0,
                             retur: parseFloat(row.Retur) || 0,
-                            jatuhTempo: row.Jatuh_Tempo_Faktur ? new Date(row.Juh_Tempo_Faktur).toISOString().slice(0,10) : '',
+                            jatuhTempo: row.Jatuh_Tempo_Faktur ? new Date(row.Jatuh_Tempo_Faktur).toISOString().slice(0,10) : '',
                             createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: new Date()
                         });
                     }
