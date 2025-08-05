@@ -283,6 +283,136 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function saveContact(e) {
+        e.preventDefault();
+        const contactName = document.getElementById('contact-name').value.trim();
+        const contactType = document.getElementById('contact-type').value;
+        if (!contactName) {
+            alert('Nama kontak wajib diisi!');
+            return;
+        }
+        if (!contactType) {
+            alert('Jenis kontak wajib dipilih!');
+            return;
+        }
+        const contactData = {
+            name: contactName,
+            type: contactType,
+            phone: document.getElementById('contact-phone').value.trim() || null,
+            email: document.getElementById('contact-email').value.trim() || null,
+            address: document.getElementById('contact-address').value.trim() || null,
+            contactPerson: document.getElementById('contact-person').value.trim() || null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        const contactId = document.getElementById('contact-id').value;
+        if (contactId) {
+            contactsCollection.doc(contactId).update(contactData).then(() => {
+                alert('Kontak berhasil diperbarui!');
+                document.getElementById('cancel-edit-contact-btn').click();
+            }).catch(err => {
+                console.error("Error updating contact: ", err);
+                alert("Gagal memperbarui kontak: " + err.message);
+            });
+        } else {
+            contactData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            contactsCollection.add(contactData).then(() => {
+                alert('Kontak baru berhasil disimpan!');
+                document.getElementById('contact-form').reset();
+            }).catch(err => {
+                console.error("Error adding contact: ", err);
+                alert("Gagal menyimpan kontak baru: " + err.message);
+            });
+        }
+    }
+
+    window.editContact = (id) => {
+        const contact = allContacts.find(c => c.id === id);
+        if (!contact) return;
+        document.getElementById('contact-id').value = id;
+        document.getElementById('contact-name').value = contact.name || '';
+        document.getElementById('contact-type').value = contact.type || '';
+        document.getElementById('contact-phone').value = contact.phone || '';
+        document.getElementById('contact-email').value = contact.email || '';
+        document.getElementById('contact-address').value = contact.address || '';
+        document.getElementById('contact-person').value = contact.contactPerson || '';
+        document.getElementById('contact-form-title').textContent = 'Edit Kontak';
+          const id = document.getElementById('transaksi-id').value;
+        const data = {
+            mode: document.querySelector('input[name="appMode"]:checked').value, type: 'faktur',
+            nama: document.getElementById('nama-dropdown').value, tanggal: document.getElementById('tanggal').value,
+            noFaktur: document.getElementById('no-faktur').value, keterangan: document.getElementById('keterangan').value,
+            jumlah: parseFloat(document.getElementById('jumlah').value), jatuhTempo: document.getElementById('jatuh-tempo').value,
+            retur: parseFloat(document.getElementById('retur').value) || 0, 
+            updatedAt: new Date()
+        };
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
+        if (id) {
+            transactionCollection.doc(id).update(data).then(() => modalInstance.hide()).catch(err => {
+                console.error("Error updating transaction: ", err);
+                alert("Gagal memperbarui transaksi.");
+            });
+        } else {
+            data.createdAt = new Date();
+            transactionCollection.add(data).then(() => modalInstance.hide()).catch(err => {
+                console.error("Error adding transaction: ", err);
+                alert("Gagal menyimpan transaksi baru.");
+            });
+        }
+    }
+
+    function handlePaymentSubmit(e) {
+        e.preventDefault();
+        const fakturId = document.getElementById('payment-transaksi-id').value;
+        const fakturAsli = allTransactions.find(tx => tx.id === fakturId);
+        if (!fakturAsli) return alert('Faktur asli tidak ditemukan!');
+        const paymentRows = document.querySelectorAll('.payment-method-row');
+        if (paymentRows.length === 0) return alert('Tambahkan minimal satu metode pembayaran.');
+        const batch = db.batch();
+        const paymentGroupId = `PAY-${Date.now()}`;
+        paymentRows.forEach(row => {
+            const paymentData = {
+                mode: fakturAsli.mode, type: 'payment', linkedFakturId: fakturId, paymentGroupId,
+                noFaktur: fakturAsli.noFaktur, nama: fakturAsli.nama,
+                tanggal: document.getElementById('payment-date').value,
+                jumlah: parseFloat(row.querySelector('.payment-amount').value) || 0,
+                metode: row.querySelector('.payment-type').value,
+                createdAt: new Date()
+            };
+            if (paymentData.jumlah <= 0) return;
+            if (paymentData.metode === 'Transfer') paymentData.bank = row.querySelector('.transfer-bank').value;
+            if (paymentData.metode === 'Giro') {
+                paymentData.giroNo = row.querySelector('.giro-no').value;
+                paymentData.giroDueDate = row.querySelector('.giro-due-date').value;
+            }
+            const newPaymentRef = transactionCollection.doc();
+            batch.set(newPaymentRef, paymentData);
+        });
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('payment-modal'));
+        batch.commit().then(() => {
+            modalInstance.hide();
+            const detailsModalInstance = bootstrap.Modal.getInstance(document.getElementById('details-modal'));
+            if(detailsModalInstance) detailsModalInstance.hide();
+        }).catch(err => {
+            console.error("Error saving payment: ", err);
+            alert('Gagal menyimpan pembayaran.');
+        });
+    }
+
+    window.deleteTransaksi = (id, type) => {
+        if (confirm('Yakin ingin menghapus? Aksi ini tidak bisa dibatalkan.')) {
+            const detailsModalInstance = bootstrap.Modal.getInstance(document.getElementById('details-modal'));
+            if (type === 'faktur') {
+                const paymentsToDelete = allTransactions.filter(p => p.linkedFakturId === id);
+                const batch = db.batch();
+                paymentsToDelete.forEach(p => batch.delete(transactionCollection.doc(p.id)));
+                batch.delete(transactionCollection.doc(id));
+                batch.commit().then(() => detailsModalInstance ? detailsModalInstance.hide() : null).catch(err => alert("Gagal menghapus transaksi."));
+            } else {
+                transactionCollection.doc(id).delete().then(() => detailsModalInstance ? detailsModalInstance.hide() : null).catch(err => alert("Gagal menghapus pembayaran."));
+            }
+        }
+    }
+
     // FUNGSI YANG DIPERBAIKI
     function saveContact(e) {
         e.preventDefault();
