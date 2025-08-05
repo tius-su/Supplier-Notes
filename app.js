@@ -26,6 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const transaksiForm = document.getElementById('transaksi-form');
     const paymentForm = document.getElementById('payment-form');
     let paymentMethodCounter = 0;
+    let newPaymentMethodCounter = 0;
 
     // --- FUNGSI UTAMA APLIKASI ---
     function initApp() {
@@ -57,6 +58,63 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('contact-form-title').textContent = 'Tambah Kontak Baru';
             document.getElementById('cancel-edit-contact-btn').style.display = 'none';
         });
+
+        // Event listener baru untuk tombol "Tambah Transaksi Baru"
+        document.getElementById('tambah-transaksi-btn').addEventListener('click', resetTransaksiForm);
+        // Event listener baru untuk toggle transaksi lunas
+        document.getElementById('is-lunas').addEventListener('change', handleLunasToggle);
+        // Event listener untuk tombol tambah pembayaran di modal transaksi baru
+        document.getElementById('add-new-payment-method-btn').addEventListener('click', () => addNewPaymentMethodRow());
+    }
+
+    function resetTransaksiForm() {
+        transaksiForm.reset();
+        document.getElementById('transaksi-id').value = '';
+        document.getElementById('transaksi-modal-title').textContent = 'Tambah Faktur Baru';
+        
+        // Atur ulang field pembayaran lunas
+        document.getElementById('is-lunas').checked = false;
+        handleLunasToggle();
+    }
+    
+    function handleLunasToggle() {
+        const isChecked = document.getElementById('is-lunas').checked;
+        const jatuhTempoContainer = document.getElementById('jatuh-tempo-container');
+        const paymentFieldsContainer = document.getElementById('payment-fields-container');
+        
+        if (isChecked) {
+            jatuhTempoContainer.style.display = 'none';
+            paymentFieldsContainer.style.display = 'block';
+            document.getElementById('jatuh-tempo').removeAttribute('required');
+            addNewPaymentMethodRow(parseFloat(document.getElementById('jumlah').value) || 0);
+        } else {
+            jatuhTempoContainer.style.display = 'block';
+            paymentFieldsContainer.style.display = 'none';
+            document.getElementById('jatuh-tempo').setAttribute('required', 'required');
+        }
+    }
+
+    function addNewPaymentMethodRow(amount = 0) {
+        newPaymentMethodCounter++;
+        const container = document.getElementById('new-payment-methods-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'new-payment-method-row card card-body mb-2';
+        newRow.id = `new-payment-row-${newPaymentMethodCounter}`;
+        newRow.innerHTML = `<div class="d-flex justify-content-end"><button type="button" class="btn-close" onclick="this.closest('.new-payment-method-row').remove(); updateNewTotalPaymentDisplay();"></button></div><div class="row g-2"><div class="col-md-6"><label class="form-label">Jumlah</label><input type="number" class="form-control new-payment-amount" value="${amount}" oninput="updateNewTotalPaymentDisplay()"></div><div class="col-md-6"><label class="form-label">Metode</label><select class="form-select new-payment-type" onchange="toggleNewPaymentDetails(this)"><option value="Cash">Cash</option><option value="Transfer">Transfer</option><option value="Giro">Giro</option></select></div></div><div class="new-transfer-details mt-2" style="display: none;"><input type="text" class="form-control new-transfer-bank" placeholder="Contoh: BCA"></div><div class="new-giro-details mt-2" style="display: none;"><input type="text" class="form-control new-giro-no mb-2" placeholder="Nomor Giro"><input type="date" class="form-control new-giro-due-date"></div>`;
+        container.appendChild(newRow);
+        updateNewTotalPaymentDisplay();
+    }
+
+    window.toggleNewPaymentDetails = (selectElement) => {
+        const parentRow = selectElement.closest('.new-payment-method-row');
+        parentRow.querySelector('.new-transfer-details').style.display = selectElement.value === 'Transfer' ? 'block' : 'none';
+        parentRow.querySelector('.new-giro-details').style.display = selectElement.value === 'Giro' ? 'block' : 'none';
+    }
+
+    function updateNewTotalPaymentDisplay() {
+        let total = 0;
+        document.querySelectorAll('.new-payment-amount').forEach(input => total += parseFloat(input.value) || 0);
+        document.getElementById('new-total-payment-display').textContent = `Rp ${formatCurrency(total)}`;
     }
 
     function loadAllTransactions() {
@@ -125,6 +183,151 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     window.openDetailsModal = (entityName) => {
+        const entityTransactions = allTransactions.filter(tx => tx.nama === entityName).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal) || (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        const detailsTableBody = document.getElementById('details-table-body');
+        detailsTableBody.innerHTML = '';
+        document.getElementById('details-modal-label').textContent = `Detail Transaksi: ${entityName}`;
+        let runningBalance = 0;
+        entityTransactions.forEach(tx => {
+            let debit = 0, kredit = 0, actions = '', keteranganText = tx.keterangan || '';
+            if (tx.type === 'faktur') {
+                debit = (tx.jumlah || 0) - (tx.retur || 0);
+                runningBalance += debit;
+                if (tx.retur > 0) keteranganText += ` (Retur: ${formatCurrency(tx.retur)})`;
+                if (calculateSisaFaktur(tx.id) > 0) actions += `<button class="btn btn-sm btn-success" onclick="openPaymentModal('${tx.id}', '${tx.noFaktur}')" title="Bayar"><i class="bi bi-cash-coin"></i></button> `;
+                actions += `<button class="btn btn-sm btn-warning" onclick="editFaktur('${tx.id}')" title="Edit"><i class="bi bi-pencil-fill"></i></button> `;
+            } else if (tx.type === 'payment') {
+                kredit = tx.jumlah || 0;
+                runningBalance -= kredit;
+                keteranganText = `${tx.metode}`;
+                if (tx.bank) keteranganText += ` - ${tx.bank}`;
+                if (tx.giroNo) keteranganText += ` - No: ${tx.giroNo}`;
+            }
+            actions += `<button class="btn btn-sm btn-danger" onclick="deleteTransaksi('${tx.id}', '${tx.type}')" title="Hapus"><i class="bi bi-trash-fill"></i></button>`;
+            detailsTableBody.innerHTML += `<tr><td>${tx.tanggal}</td><td>${tx.noFaktur || '-'}</td><td>${keteranganText}</td><td>${debit > 0 ? formatCurrency(debit) : '-'}</td><td>${kredit > 0 ? formatCurrency(kredit) : '-'}</td><td class="fw-bold">${formatCurrency(runningBalance)}</td><td>${actions}</td></tr>`;
+        });
+        document.getElementById('details-total-sisa').textContent = `Rp ${formatCurrency(runningBalance)}`;
+        new bootstrap.Modal(document.getElementById('details-modal')).show();
+    }
+
+    window.openPaymentModal = (fakturId, noFaktur) => {
+        paymentForm.reset();
+        document.getElementById('payment-methods-container').innerHTML = '';
+        paymentMethodCounter = 0;
+        document.getElementById('payment-transaksi-id').value = fakturId;
+        document.getElementById('payment-faktur-no').textContent = noFaktur;
+        const sisa = calculateSisaFaktur(fakturId);
+        document.getElementById('sisa-tagihan-payment').textContent = `Rp ${formatCurrency(sisa)}`;
+        document.getElementById('payment-date').value = new Date().toISOString().slice(0, 10);
+        addPaymentMethodRow(sisa);
+        document.getElementById('add-payment-method-btn').onclick = () => addPaymentMethodRow();
+        new bootstrap.Modal(document.getElementById('payment-modal')).show();
+    }
+
+    function addPaymentMethodRow(amount = 0) {
+        paymentMethodCounter++;
+        const container = document.getElementById('payment-methods-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'payment-method-row card card-body mb-2';
+        newRow.id = `payment-row-${paymentMethodCounter}`;
+        newRow.innerHTML = `<div class="d-flex justify-content-end"><button type="button" class="btn-close" onclick="this.closest('.payment-method-row').remove(); updateTotalPaymentDisplay();"></button></div><div class="row g-2"><div class="col-md-6"><label class="form-label">Jumlah</label><input type="number" class="form-control payment-amount" value="${amount}" oninput="updateTotalPaymentDisplay()"></div><div class="col-md-6"><label class="form-label">Metode</label><select class="form-select payment-type" onchange="togglePaymentDetails(this)"><option value="Cash">Cash</option><option value="Transfer">Transfer</option><option value="Giro">Giro</option></select></div></div><div class="transfer-details mt-2" style="display: none;"><input type="text" class="form-control transfer-bank" placeholder="Contoh: BCA"></div><div class="giro-details mt-2" style="display: none;"><input type="text" class="form-control giro-no mb-2" placeholder="Nomor Giro"><input type="date" class="form-control giro-due-date"></div>`;
+        container.appendChild(newRow);
+        updateTotalPaymentDisplay();
+    }
+
+    window.togglePaymentDetails = (selectElement) => {
+        const parentRow = selectElement.closest('.payment-method-row');
+        parentRow.querySelector('.transfer-details').style.display = selectElement.value === 'Transfer' ? 'block' : 'none';
+        parentRow.querySelector('.giro-details').style.display = selectElement.value === 'Giro' ? 'block' : 'none';
+    }
+
+    function updateTotalPaymentDisplay() {
+        let total = 0;
+        document.querySelectorAll('.payment-amount').forEach(input => total += parseFloat(input.value) || 0);
+        document.getElementById('total-payment-display').textContent = `Rp ${formatCurrency(total)}`;
+    }
+
+    window.editFaktur = (id) => {
+        const tx = allTransactions.find(t => t.id === id);
+        if (!tx) return;
+        document.getElementById('transaksi-id').value = id;
+        document.getElementById('transaksi-modal-title').textContent = `Edit Faktur ${tx.noFaktur}`;
+        document.getElementById('nama-dropdown').value = tx.nama;
+        document.getElementById('tanggal').value = tx.tanggal;
+        document.getElementById('no-faktur').value = tx.noFaktur;
+        document.getElementById('keterangan').value = tx.keterangan;
+        document.getElementById('jumlah').value = tx.jumlah;
+        document.getElementById('jatuh-tempo').value = tx.jatuhTempo;
+        document.getElementById('retur').value = tx.retur;
+        
+        // Sembunyikan toggle dan field pembayaran lunas saat edit
+        document.getElementById('is-lunas').closest('.form-check').style.display = 'none';
+        document.getElementById('payment-fields-container').style.display = 'none';
+        document.getElementById('jatuh-tempo-container').style.display = 'block';
+
+        new bootstrap.Modal(document.getElementById('transaksi-modal')).show();
+    }
+
+    function handleFakturSubmit(e) {
+        e.preventDefault();
+        const id = document.getElementById('transaksi-id').value;
+        const isLunas = document.getElementById('is-lunas').checked;
+
+        // Data dasar faktur
+        const fakturData = {
+            mode: document.querySelector('input[name="appMode"]:checked').value,
+            type: 'faktur',
+            nama: document.getElementById('nama-dropdown').value,
+            tanggal: document.getElementById('tanggal').value,
+            noFaktur: document.getElementById('no-faktur').value,
+            keterangan: document.getElementById('keterangan').value,
+            jumlah: parseFloat(document.getElementById('jumlah').value),
+            retur: parseFloat(document.getElementById('retur').value) || 0,
+            updatedAt: new Date()
+        };
+
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
+
+        if (id) {
+            // Logika untuk edit faktur
+            transactionCollection.doc(id).update(fakturData).then(() => {
+                modalInstance.hide();
+                resetTransaksiForm();
+            }).catch(err => {
+                console.error("Error updating transaction: ", err);
+                alert("Gagal memperbarui transaksi.");
+            });
+        } else {
+            // Logika untuk transaksi baru
+            fakturData.createdAt = new Date();
+            const batch = db.batch();
+            const newFakturRef = transactionCollection.doc();
+            
+            if (isLunas) {
+                fakturData.jatuhTempo = null;
+                
+                const paymentRows = document.querySelectorAll('.new-payment-method-row');
+                if (paymentRows.length === 0) {
+                     alert('Tambahkan minimal satu metode pembayaran.');
+                     return;
+                }
+                
+                let totalPayments = 0;
+                const paymentGroupId = `PAY-${Date.now()}`;
+                paymentRows.forEach(row => {
+                    const paymentAmount = parseFloat(row.querySelector('.new-payment-amount').value) || 0;
+                    if (paymentAmount > 0) {
+                        totalPayments += paymentAmount;
+                        const paymentData = {
+                            mode: fakturData.mode,
+                            type: 'payment',
+                            linkedFakturId: newFakturRef.id,
+                            paymentGroupId: paymentGroupId,
+                            noFaktur: fakturData.noFaktur,
+                            nama: fakturData.nama,
+                            tanggal: fakturData.tanggal,
+                            jumlah: paymentAmount,
+                            metode: row.querySelector('.new-paym    window.openDetailsModal = (entityName) => {
         const entityTransactions = allTransactions.filter(tx => tx.nama === entityName).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal) || (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
         const detailsTableBody = document.getElementById('details-table-body');
         detailsTableBody.innerHTML = '';
