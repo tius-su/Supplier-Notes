@@ -36,7 +36,7 @@
                 <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#report-modal"><i class="bi bi-journal-text"></i> Laporan & Data</button>
           <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#contacts-modal"><i class="bi bi-people-fill"></i> Manajemen Kontak</button>
             </div>
-            <input type="text" class="form-control" id="filter-nama" placeholder="Cari nama supplier atau customer...">
+       <select id="nama-dropdown" class="form-select" required></select>
         </section>
 
         <div class="text-center mb-3">
@@ -164,6 +164,45 @@
         </div>
     </div>
 
+<div class="modal fade" id="contacts-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manajemen Supplier & Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <form id="contact-form" class="card card-body">
+                            <h5 id="contact-form-title">Tambah Kontak Baru</h5>
+                            <input type="hidden" id="contact-id">
+                            <div class="mb-2"><label>Nama Kontak*</label><input type="text" class="form-control" id="contact-name" required></div>
+                            <div class="mb-2"><label>Jenis*</label><select class="form-select" id="contact-type"><option value="supplier">Supplier</option><option value="customer">Customer</option></select></div>
+                            <div class="mb-2"><label>No. Telp</label><input type="tel" class="form-control" id="contact-phone"></div>
+                            <div class="mb-2"><label>Email</label><input type="email" class="form-control" id="contact-email"></div>
+                            <div class="mb-2"><label>Contact Person</label><input type="text" class="form-control" id="contact-person"></div>
+                            <div class="mb-2"><label>Alamat</label><textarea class="form-control" id="contact-address" rows="2"></textarea></div>
+                            <div class="d-grid gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary">Simpan Kontak</button>
+                                <button type="button" class="btn btn-outline-secondary" id="cancel-edit-contact-btn" style="display:none;">Batal Edit</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead><tr><th>Nama</th><th>Jenis</th><th>Telp</th><th>Aksi</th></tr></thead>
+                                <tbody id="contacts-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
