@@ -270,19 +270,25 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // FUNGSI YANG DIPERBAIKI
     function saveContact(e) {
         e.preventDefault();
         const contactData = {
             name: document.getElementById('contact-name').value, type: document.getElementById('contact-type').value,
             phone: document.getElementById('contact-phone').value, email: document.getElementById('contact-email').value,
             address: document.getElementById('contact-address').value, contactPerson: document.getElementById('contact-person').value,
-            updatedAt: new Date()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Diubah ke serverTimestamp
         };
         const contactId = document.getElementById('contact-id').value;
-        if (contactId) contactsCollection.doc(contactId).update(contactData).then(() => document.getElementById('cancel-edit-contact-btn').click());
-        else {
-            contactData.createdAt = new Date();
-            contactsCollection.add(contactData).then(() => document.getElementById('contact-form').reset());
+        if (contactId) {
+            contactsCollection.doc(contactId).update(contactData).then(() => {
+                document.getElementById('cancel-edit-contact-btn').click();
+            });
+        } else {
+            contactData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); // Diubah ke serverTimestamp
+            contactsCollection.add(contactData).then(() => {
+                document.getElementById('contact-form').reset();
+            });
         }
     }
 
@@ -398,7 +404,7 @@ window.addEventListener('DOMContentLoaded', () => {
                             tanggal: row.Tanggal_Transaksi.toISOString().slice(0,10), noFaktur: row.No_Faktur || '',
                             keterangan: row.Keterangan || '', jumlah: parseFloat(row.Jumlah_Faktur) || 0,
                             retur: parseFloat(row.Retur) || 0,
-                            jatuhTempo: row.Jatuh_Tempo_Faktur ? new Date(row.Jatuh_Tempo_Faktur).toISOString().slice(0,10) : '',
+                            jatuhTempo: row.Jatuh_Tempo_Faktur ? new Date(row.Juh_Tempo_Faktur).toISOString().slice(0,10) : '',
                             createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: new Date()
                         });
                     }
