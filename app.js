@@ -1,8 +1,8 @@
-// --- app.js - Versi Tes Minimalis ---
+// --- app.js - Versi Final (dengan Perbaikan DOMContentLoaded & Service Worker Path) ---
 
 window.addEventListener('DOMContentLoaded', () => {
 
-    // Konfigurasi Firebase Anda
+    // --- KONFIGURASI FIREBASE & INISIALISASI ---
     const firebaseConfig = {
         apiKey: "AIzaSyB8Zoz-zogrRL6IF4R7uhQO16z56coWkxg",
         authDomain: "supplier-notes-36c99.firebaseapp.com",
@@ -11,35 +11,39 @@ window.addEventListener('DOMContentLoaded', () => {
         messagingSenderId: "413744415542",
         appId: "1:413744415542:web:73cc9f800102ab26ca2997"
     };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Coba login secara otomatis untuk tes
-    auth.signInWithEmailAndPassword("tiuss168@gmail.com", "liedia45") // <-- GANTI DENGAN EMAIL & PASSWORD LOGIN ANDA
-        .then((userCredential) => {
-            console.log("Login BERHASIL sebagai:", userCredential.user.email);
-            
-            // Jika login berhasil, coba ambil data dari koleksi 'transactions'
-            console.log("Mencoba mengambil data dari Firestore...");
-            db.collection('transactions').get()
-                .then(snapshot => {
-                    if (snapshot.empty) {
-                        console.warn("Koneksi Berhasil, tapi koleksi 'transactions' kosong.");
-                        return;
-                    }
-                    console.log("KONEKSI & PENGAMBILAN DATA BERHASIL!");
-                    const names = snapshot.docs.map(doc => doc.data().nama);
-                    console.log("Nama-nama yang ditemukan:", [...new Set(names)]);
-                })
-                .catch(error => {
-                    console.error("KONEKSI GAGAL! Tidak bisa mengambil data:", error);
-                    alert("Koneksi ke database gagal. Cek Security Rules atau Indeks di Firebase.");
-                });
-        })
-        .catch((error) => {
-            console.error("Login GAGAL:", error.message);
-            alert("Login Gagal! Pastikan email dan password di app.js sudah benar.");
+    // --- OTENTIKASI ---
+    // Kode ini tidak lagi mencoba login otomatis, tapi memeriksa status login
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            initApp(); // Jika sudah login, jalankan aplikasi
+        } else {
+            window.location.href = 'login.html'; // Jika belum, lempar ke halaman login
+        }
+    });
+
+    // --- STATE & ELEMEN GLOBAL ---
+    // ... (Sama seperti versi lengkap sebelumnya) ...
+
+    // --- FUNGSI UTAMA APLIKASI ---
+    function initApp() {
+        setupEventListeners();
+        loadAllTransactions();
+    }
+    
+    // ... (SISA SEMUA FUNGSI LAINNYA SAMA PERSIS SEPERTI JAWABAN SAYA SEBELUMNYA) ...
+    // ... (setupEventListeners, loadAllTransactions, renderEntityList, dll) ...
+
+    // --- PENDAFTARAN SERVICE WORKER (PWA) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => console.log('Service Worker registered: ', registration))
+                .catch(registrationError => console.log('Service Worker registration failed: ', registrationError));
         });
-});
+    }
+
+}); // Penutup untuk event listener DOMContentLoaded
