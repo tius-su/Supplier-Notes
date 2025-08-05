@@ -1,6 +1,6 @@
-const CACHE_NAME = 'nota-keuangan-cache-v2'; // Versi cache dinaikkan agar update
+const CACHE_NAME = 'nota-keuangan-cache-v3'; // Versi cache dinaikkan
 const urlsToCache = [
-    '.', // Diubah dari '/' menjadi '.' untuk path relatif
+    '.', // Path relatif untuk halaman utama
     'index.html',
     'login.html',
     'style.css',
@@ -14,7 +14,6 @@ const urlsToCache = [
     'https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js'
 ];
 
-// Hapus cache lama saat service worker baru aktif
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -44,7 +43,6 @@ self.addEventListener('fetch', event => {
         caches.match(event.request)
             .then(response => {
                 return response || fetch(event.request);
-            }
-        )
+            })
     );
 });
