@@ -72,13 +72,18 @@ window.addEventListener('DOMContentLoaded', () => {
             allContacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const contactsTableBody = document.getElementById('contacts-table-body');
             const namaDropdown = document.getElementById('nama-dropdown');
+            const reportContactFilter = document.getElementById('report-contact-filter');
+            
             contactsTableBody.innerHTML = '';
             namaDropdown.innerHTML = '<option value="">-- Pilih Supplier/Customer --</option>';
+            reportContactFilter.innerHTML = '<option value="">Semua Kontak</option>';
+
             allContacts.forEach(contact => {
                 const row = `<tr><td>${contact.name}</td><td>${contact.type}</td><td>${contact.phone || '-'}</td><td><button class="btn btn-sm btn-warning" onclick="editContact('${contact.id}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteContact('${contact.id}')">Hapus</button></td></tr>`;
                 contactsTableBody.innerHTML += row;
                 const option = `<option value="${contact.name}">${contact.name} (${contact.type})</option>`;
                 namaDropdown.innerHTML += option;
+                reportContactFilter.innerHTML += option;
             });
         });
     }
@@ -308,9 +313,20 @@ window.addEventListener('DOMContentLoaded', () => {
         return (faktur.jumlah || 0) - (faktur.retur || 0) - totalPembayaran;
     }
 
+    function getFilteredReportData() {
+        const tglMulai = document.getElementById('report-tgl-mulai').value;
+        const tglAkhir = document.getElementById('report-tgl-akhir').value;
+        const contactName = document.getElementById('report-contact-filter').value;
+        
+        return allTransactions.filter(tx => 
+            (!tglMulai || tx.tanggal >= tglMulai) && 
+            (!tglAkhir || tx.tanggal <= tglAkhir) &&
+            (!contactName || tx.nama === contactName)
+        );
+    }
+
     function viewReportOnWeb() {
-        const tglMulai = document.getElementById('report-tgl-mulai').value, tglAkhir = document.getElementById('report-tgl-akhir').value;
-        const filtered = allTransactions.filter(tx => (!tglMulai || tx.tanggal >= tglMulai) && (!tglAkhir || tx.tanggal <= tglAkhir));
+        const filtered = getFilteredReportData();
         if (filtered.length === 0) return alert('Tidak ada data yang cocok.');
         const tableHead = document.getElementById('view-report-head'), tableBody = document.getElementById('view-report-body');
         tableHead.innerHTML = `<tr><th>Tanggal</th><th>Nama</th><th>Jenis</th><th>No Faktur</th><th>Debit</th><th>Kredit</th></tr>`;
@@ -324,9 +340,80 @@ window.addEventListener('DOMContentLoaded', () => {
         new bootstrap.Modal(document.getElementById('view-report-modal')).show();
     }
 
-    function generatePdfReport() { /* ... kode sama ... */ }
-    function exportToExcel() { /* ... kode sama ... */ }
-    function importFromExcel(e) { /* ... kode sama ... */ }
+    function generatePdfReport() {
+        const filtered = getFilteredReportData();
+        if (filtered.length === 0) return alert('Tidak ada data yang cocok.');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const contactName = document.getElementById('report-contact-filter').value;
+        doc.text(`Laporan Transaksi ${contactName || 'Semua Kontak'}`, 14, 15);
+        doc.setFontSize(10);
+        const tglMulai = document.getElementById('report-tgl-mulai').value;
+        const tglAkhir = document.getElementById('report-tgl-akhir').value;
+        doc.text(`Periode: ${tglMulai || 'Awal'} - ${tglAkhir || 'Akhir'}`, 14, 20);
+        const body = filtered.map(tx => [tx.tanggal, tx.nama, tx.mode.toUpperCase(), tx.noFaktur || '-', tx.type === 'faktur' ? formatCurrency((tx.jumlah || 0) - (tx.retur || 0)) : '-', tx.type === 'payment' ? formatCurrency(tx.jumlah) : '-']);
+        doc.autoTable({ startY: 25, head: [['Tanggal', 'Nama', 'Jenis', 'No Faktur', 'Debit', 'Kredit']], body: body });
+        doc.save(`Laporan-${contactName || 'Semua'}.pdf`);
+    }
+
+    function exportToExcel() {
+        if (allTransactions.length === 0) return alert("Tidak ada data untuk diekspor.");
+        const excelData = allTransactions.map(tx => {
+            let sisaTagihan = tx.type === 'faktur' ? calculateSisaFaktur(tx.id) : null;
+            return {
+                ID_Transaksi: tx.id, Jenis_Transaksi: tx.type, Mode: tx.mode, Nama: tx.nama, Tanggal_Transaksi: tx.tanggal,
+                No_Faktur: tx.noFaktur, Keterangan: tx.keterangan || '', Jumlah_Faktur: tx.type === 'faktur' ? tx.jumlah : '',
+                Retur: tx.type === 'faktur' ? tx.retur : '', Sisa_Tagihan_Faktur: sisaTagihan, Jumlah_Pembayaran: tx.type === 'payment' ? tx.jumlah : '',
+                Metode_Pembayaran: tx.type === 'payment' ? tx.metode : '', Bank_Transfer: tx.type === 'payment' ? tx.bank || '' : '',
+                No_Giro: tx.type === 'payment' ? tx.giroNo || '' : '', Jatuh_Tempo_Faktur: tx.type === 'faktur' ? tx.jatuhTempo : '',
+                Jatuh_Tempo_Giro: tx.type === 'payment' ? tx.giroDueDate || '' : '', ID_Faktur_Terkait: tx.type === 'payment' ? tx.linkedFakturId : ''
+            };
+        });
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Semua Transaksi");
+        XLSX.writeFile(workbook, `Export_Nota_Keuangan.xlsx`);
+    }
+
+    function importFromExcel(e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, {type: 'array', cellDates:true});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                if (!confirm(`Impor ${jsonData.length} baris data?`)) { e.target.value = ''; return; }
+                if (jsonData.length > 0 && (!jsonData[0].Jenis_Transaksi || !jsonData[0].Mode || !jsonData[0].Nama || !jsonData[0].Tanggal_Transaksi)) {
+                    alert("Import Gagal! Kolom wajib: 'Jenis_Transaksi', 'Mode', 'Nama', 'Tanggal_Transaksi'.");
+                    e.target.value = ''; return;
+                }
+                const batch = db.batch();
+                jsonData.forEach(row => {
+                    if (row.Jenis_Transaksi && row.Jenis_Transaksi.toLowerCase() === 'faktur') {
+                        const newDocRef = transactionCollection.doc();
+                        batch.set(newDocRef, {
+                            type: 'faktur', mode: row.Mode.toLowerCase(), nama: row.Nama,
+                            tanggal: row.Tanggal_Transaksi.toISOString().slice(0,10), noFaktur: row.No_Faktur || '',
+                            keterangan: row.Keterangan || '', jumlah: parseFloat(row.Jumlah_Faktur) || 0,
+                            retur: parseFloat(row.Retur) || 0,
+                            jatuhTempo: row.Jatuh_Tempo_Faktur ? new Date(row.Jatuh_Tempo_Faktur).toISOString().slice(0,10) : '',
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: new Date()
+                        });
+                    }
+                });
+                batch.commit().then(() => {
+                    alert('Impor data faktur berhasil!'); e.target.value = '';
+                }).catch(err => {
+                    alert('Terjadi kesalahan saat impor.'); console.error("Import error:", err); e.target.value = '';
+                });
+            } catch (error) {
+                alert('Gagal memproses file Excel.'); console.error(error); e.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
     
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
