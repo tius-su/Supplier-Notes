@@ -17,7 +17,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
 
     // Coba login secara otomatis untuk tes
-    auth.signInWithEmailAndPassword("email@anda.com", "passwordanda") // <-- GANTI DENGAN EMAIL & PASSWORD LOGIN ANDA
+    auth.signInWithEmailAndPassword("tiuss168@gmail.com", "liedia45") // <-- GANTI DENGAN EMAIL & PASSWORD LOGIN ANDA
         .then((userCredential) => {
             console.log("Login BERHASIL sebagai:", userCredential.user.email);
             
