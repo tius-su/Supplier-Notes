@@ -327,106 +327,83 @@ window.addEventListener('DOMContentLoaded', () => {
             type: 'faktur',
             nama: document.getElementById('nama-dropdown').value,
             tanggal: document.getElementById('tanggal').value,
-         window.openDetailsModal = (entityName) => {
-        const entityTransactions = allTransactions.filter(tx => tx.nama === entityName).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal) || (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-        const detailsTableBody = document.getElementById('details-table-body');
-        detailsTableBody.innerHTML = '';
-        document.getElementById('details-modal-label').textContent = `Detail Transaksi: ${entityName}`;
-        let runningBalance = 0;
-        entityTransactions.forEach(tx => {
-            let debit = 0, kredit = 0, actions = '', keteranganText = tx.keterangan || '';
-            if (tx.type === 'faktur') {
-                debit = (tx.jumlah || 0);
-                runningBalance += (tx.jumlah || 0) - (tx.retur || 0);
-                if (tx.retur > 0) keteranganText += ` (Retur: ${formatCurrency(tx.retur)})`;
-                if (calculateSisaFaktur(tx.id) > 0) actions += `<button class="btn btn-sm btn-success" onclick="openPaymentModal('${tx.id}', '${tx.noFaktur}')" title="Bayar"><i class="bi bi-cash-coin"></i></button> `;
-                actions += `<button class="btn btn-sm btn-warning" onclick="editFaktur('${tx.id}')" title="Edit"><i class="bi bi-pencil-fill"></i></button> `;
-            } else if (tx.type === 'payment') {
-                kredit = tx.jumlah || 0;
-                runningBalance -= kredit;
-                keteranganText = `${tx.metode}`;
-                if (tx.bank) keteranganText += ` - ${tx.bank}`;
-                if (tx.giroNo) keteranganText += ` - No: ${tx.giroNo}`;
-            }
-            actions += `<button class="btn btn-sm btn-danger" onclick="deleteTransaksi('${tx.id}', '${tx.type}')" title="Hapus"><i class="bi bi-trash-fill"></i></button>`;
-            detailsTableBody.innerHTML += `<tr><td>${tx.tanggal}</td><td>${tx.noFaktur || '-'}</td><td>${keteranganText}</td><td>${debit > 0 ? formatCurrency(debit) : '-'}</td><td>${kredit > 0 ? formatCurrency(kredit) : '-'}</td><td class="fw-bold">${formatCurrency(runningBalance)}</td><td>${actions}</td></tr>`;
-        });
-        document.getElementById('details-total-sisa').textContent = `Rp ${formatCurrency(runningBalance)}`;
-        new bootstrap.Modal(document.getElementById('details-modal')).show();
-    }
-
-    window.openPaymentModal = (fakturId, noFaktur) => {
-        paymentForm.reset();
-        document.getElementById('payment-methods-container').innerHTML = '';
-        paymentMethodCounter = 0;
-        document.getElementById('payment-transaksi-id').value = fakturId;
-        document.getElementById('payment-faktur-no').textContent = noFaktur;
-        const sisa = calculateSisaFaktur(fakturId);
-        document.getElementById('sisa-tagihan-payment').textContent = `Rp ${formatCurrency(sisa)}`;
-        document.getElementById('payment-date').value = new Date().toISOString().slice(0, 10);
-        addPaymentMethodRow(sisa);
-        document.getElementById('add-payment-method-btn').onclick = () => addPaymentMethodRow();
-        new bootstrap.Modal(document.getElementById('payment-modal')).show();
-    }
-
-    function addPaymentMethodRow(amount = 0) {
-        paymentMethodCounter++;
-        const container = document.getElementById('payment-methods-container');
-        const newRow = document.createElement('div');
-        newRow.className = 'payment-method-row card card-body mb-2';
-        newRow.id = `payment-row-${paymentMethodCounter}`;
-        newRow.innerHTML = `<div class="d-flex justify-content-end"><button type="button" class="btn-close" onclick="this.closest('.payment-method-row').remove(); updateTotalPaymentDisplay();"></button></div><div class="row g-2"><div class="col-md-6"><label class="form-label">Jumlah</label><input type="number" class="form-control payment-amount" value="${amount}" oninput="updateTotalPaymentDisplay()"></div><div class="col-md-6"><label class="form-label">Metode</label><select class="form-select payment-type" onchange="togglePaymentDetails(this)"><option value="Cash">Cash</option><option value="Transfer">Transfer</option><option value="Giro">Giro</option></select></div></div><div class="transfer-details mt-2" style="display: none;"><input type="text" class="form-control transfer-bank" placeholder="Contoh: BCA"></div><div class="giro-details mt-2" style="display: none;"><input type="text" class="form-control giro-no mb-2" placeholder="Nomor Giro"><input type="date" class="form-control giro-due-date"></div>`;
-        container.appendChild(newRow);
-        updateTotalPaymentDisplay();
-    }
-
-    window.togglePaymentDetails = (selectElement) => {
-        const parentRow = selectElement.closest('.payment-method-row');
-        parentRow.querySelector('.transfer-details').style.display = selectElement.value === 'Transfer' ? 'block' : 'none';
-        parentRow.querySelector('.giro-details').style.display = selectElement.value === 'Giro' ? 'block' : 'none';
-    }
-
-    function updateTotalPaymentDisplay() {
-        let total = 0;
-        document.querySelectorAll('.payment-amount').forEach(input => total += parseFloat(input.value) || 0);
-        document.getElementById('total-payment-display').textContent = `Rp ${formatCurrency(total)}`;
-    }
-
-    window.editFaktur = (id) => {
-        const tx = allTransactions.find(t => t.id === id);
-        if (!tx) return;
-        document.getElementById('transaksi-id').value = id;
-        document.getElementById('transaksi-modal-title').textContent = `Edit Faktur ${tx.noFaktur}`;
-        document.getElementById('nama-dropdown').value = tx.nama;
-        document.getElementById('tanggal').value = tx.tanggal;
-        document.getElementById('no-faktur').value = tx.noFaktur;
-        document.getElementById('keterangan').value = tx.keterangan;
-        document.getElementById('jumlah').value = tx.jumlah;
-        document.getElementById('jatuh-tempo').value = tx.jatuhTempo;
-        document.getElementById('retur').value = tx.retur;
-        new bootstrap.Modal(document.getElementById('transaksi-modal')).show();
-    }
-
-    function handleFakturSubmit(e) {
-        e.preventDefault();
-        const id = document.getElementById('transaksi-id').value;
-        const data = {
-            mode: document.querySelector('input[name="appMode"]:checked').value, type: 'faktur',
-            nama: document.getElementById('nama-dropdown').value, tanggal: document.getElementById('tanggal').value,
-            noFaktur: document.getElementById('no-faktur').value, keterangan: document.getElementById('keterangan').value,
-            jumlah: parseFloat(document.getElementById('jumlah').value), jatuhTempo: document.getElementById('jatuh-tempo').value,
-            retur: parseFloat(document.getElementById('retur').value) || 0, 
+            noFaktur: document.getElementById('no-faktur').value,
+            keterangan: document.getElementById('keterangan').value,
+            jumlah: parseFloat(document.getElementById('jumlah').value),
+            retur: parseFloat(document.getElementById('retur').value) || 0,
             updatedAt: new Date()
         };
+
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
+
         if (id) {
-            transactionCollection.doc(id).update(data).then(() => modalInstance.hide()).catch(err => {
+            // Logika untuk edit faktur
+            transactionCollection.doc(id).update(fakturData).then(() => {
+                modalInstance.hide();
+                resetTransaksiForm();
+            }).catch(err => {
                 console.error("Error updating transaction: ", err);
                 alert("Gagal memperbarui transaksi.");
             });
         } else {
-            data.createdAt = new Date();
-            transactionCollection.add(data).then(() => modalInstance.hide()).catch(err => {
+            // Logika untuk transaksi baru
+            fakturData.createdAt = new Date();
+            const batch = db.batch();
+            const newFakturRef = transactionCollection.doc();
+            
+            if (isLunas) {
+                fakturData.jatuhTempo = null;
+                
+                const paymentRows = document.querySelectorAll('.new-payment-method-row');
+                if (paymentRows.length === 0) {
+                     alert('Tambahkan minimal satu metode pembayaran.');
+                     return;
+                }
+                
+                let totalPayments = 0;
+                const paymentGroupId = `PAY-${Date.now()}`;
+                paymentRows.forEach(row => {
+                    const paymentAmount = parseFloat(row.querySelector('.new-payment-amount').value) || 0;
+                    if (paymentAmount > 0) {
+                        totalPayments += paymentAmount;
+                        const paymentData = {
+                            mode: fakturData.mode,
+                            type: 'payment',
+                            linkedFakturId: newFakturRef.id,
+                            paymentGroupId: paymentGroupId,
+                            noFaktur: fakturData.noFaktur,
+                            nama: fakturData.nama,
+                            tanggal: fakturData.tanggal,
+                            jumlah: paymentAmount,
+                            metode: row.querySelector('.new-payment-type').value,
+                            createdAt: new Date()
+                        };
+                        if (paymentData.metode === 'Transfer') paymentData.bank = row.querySelector('.new-transfer-bank').value;
+                        if (paymentData.metode === 'Giro') {
+                            paymentData.giroNo = row.querySelector('.new-giro-no').value;
+                            paymentData.giroDueDate = row.querySelector('.new-giro-due-date').value;
+                        }
+                        batch.set(transactionCollection.doc(), paymentData);
+                    }
+                });
+
+                if (totalPayments !== fakturData.jumlah) {
+                    alert(`Jumlah pembayaran (${formatCurrency(totalPayments)}) tidak sama dengan jumlah faktur (${formatCurrency(fakturData.jumlah)}). Mohon sesuaikan.`);
+                    return;
+                }
+                
+                batch.set(newFakturRef, fakturData);
+
+            } else {
+                // Logika default untuk faktur dengan tanggal jatuh tempo
+                fakturData.jatuhTempo = document.getElementById('jatuh-tempo').value;
+                batch.set(newFakturRef, fakturData);
+            }
+
+            batch.commit().then(() => {
+                modalInstance.hide();
+                resetTransaksiForm();
+            }).catch(err => {
                 console.error("Error adding transaction: ", err);
                 alert("Gagal menyimpan transaksi baru.");
             });
@@ -577,14 +554,24 @@ window.addEventListener('DOMContentLoaded', () => {
     function viewReportOnWeb() {
         const filtered = getFilteredReportData();
         if (filtered.length === 0) return alert('Tidak ada data yang cocok.');
+
+        let totalDebit = 0;
+        let totalKredit = 0;
+        
         const tableHead = document.getElementById('view-report-head'), tableBody = document.getElementById('view-report-body');
         tableHead.innerHTML = `<tr><th>Tanggal</th><th>Nama</th><th>Jenis</th><th>No Faktur</th><th>Debit</th><th>Kredit</th></tr>`;
         let bodyHtml = '';
+        
         filtered.forEach(tx => {
-            const debit = tx.type === 'faktur' ? formatCurrency((tx.jumlah || 0) - (tx.retur || 0)) : '-';
-            const kredit = tx.type === 'payment' ? formatCurrency(tx.jumlah) : '-';
-            bodyHtml += `<tr><td>${tx.tanggal}</td><td>${tx.nama}</td><td>${tx.mode.toUpperCase()}</td><td>${tx.noFaktur || '-'}</td><td>${debit}</td><td>${kredit}</td></tr>`;
+            const debit = tx.type === 'faktur' ? (tx.jumlah || 0) - (tx.retur || 0) : 0;
+            const kredit = tx.type === 'payment' ? (tx.jumlah || 0) : 0;
+            totalDebit += debit;
+            totalKredit += kredit;
+
+            bodyHtml += `<tr><td>${tx.tanggal}</td><td>${tx.nama}</td><td>${tx.mode.toUpperCase()}</td><td>${tx.noFaktur || '-'}</td><td>${debit > 0 ? formatCurrency(debit) : '-'}</td><td>${kredit > 0 ? formatCurrency(kredit) : '-'}</td></tr>`;
         });
+
+        bodyHtml += `<tr class="table-info fw-bold"><td colspan="4" class="text-end">TOTAL:</td><td>Rp ${formatCurrency(totalDebit)}</td><td>Rp ${formatCurrency(totalKredit)}</td></tr>`;
         tableBody.innerHTML = bodyHtml;
         new bootstrap.Modal(document.getElementById('view-report-modal')).show();
     }
@@ -592,6 +579,10 @@ window.addEventListener('DOMContentLoaded', () => {
     function generatePdfReport() {
         const filtered = getFilteredReportData();
         if (filtered.length === 0) return alert('Tidak ada data yang cocok.');
+        
+        let totalDebit = 0;
+        let totalKredit = 0;
+
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const contactName = document.getElementById('report-contact-filter').value;
@@ -600,8 +591,26 @@ window.addEventListener('DOMContentLoaded', () => {
         const tglMulai = document.getElementById('report-tgl-mulai').value;
         const tglAkhir = document.getElementById('report-tgl-akhir').value;
         doc.text(`Periode: ${tglMulai || 'Awal'} - ${tglAkhir || 'Akhir'}`, 14, 20);
-        const body = filtered.map(tx => [tx.tanggal, tx.nama, tx.mode.toUpperCase(), tx.noFaktur || '-', tx.type === 'faktur' ? formatCurrency((tx.jumlah || 0) - (tx.retur || 0)) : '-', tx.type === 'payment' ? formatCurrency(tx.jumlah) : '-']);
-        doc.autoTable({ startY: 25, head: [['Tanggal', 'Nama', 'Jenis', 'No Faktur', 'Debit', 'Kredit']], body: body });
+
+        const body = filtered.map(tx => {
+            const debit = tx.type === 'faktur' ? (tx.jumlah || 0) - (tx.retur || 0) : 0;
+            const kredit = tx.type === 'payment' ? (tx.jumlah || 0) : 0;
+            totalDebit += debit;
+            totalKredit += kredit;
+            return [tx.tanggal, tx.nama, tx.mode.toUpperCase(), tx.noFaktur || '-', debit > 0 ? formatCurrency(debit) : '-', kredit > 0 ? formatCurrency(kredit) : '-'];
+        });
+
+        doc.autoTable({ 
+            startY: 25, 
+            head: [['Tanggal', 'Nama', 'Jenis', 'No Faktur', 'Debit', 'Kredit']], 
+            body: body,
+            foot: [['', '', '', 'TOTAL:', `Rp ${formatCurrency(totalDebit)}`, `Rp ${formatCurrency(totalKredit)}`]],
+            footStyles: {
+                fillColor: [208, 237, 240], // Warna biru muda untuk footer
+                textColor: [0, 0, 0],
+                fontStyle: 'bold'
+            }
+        });
         doc.save(`Laporan-${contactName || 'Semua'}.pdf`);
     }
 
