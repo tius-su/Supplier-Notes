@@ -1,8 +1,5 @@
-// --- app.js - Versi Final (dengan Perbaikan Urutan Fungsi) ---
-
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- KONFIGURASI FIREBASE & INISIALISASI ---
     const firebaseConfig = {
         apiKey: "AIzaSyB8Zoz-zogrRL6IF4R7uhQO16z56coWkxg",
         authDomain: "supplier-notes-36c99.firebaseapp.com",
@@ -15,10 +12,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- OTENTIKASI ---
     auth.onAuthStateChanged(user => user ? initApp() : window.location.href = 'login.html');
 
-    // --- STATE & ELEMEN GLOBAL ---
     let currentDisplayMode = 'pembelian';
     let allTransactions = [];
     const transactionCollection = db.collection('transactions');
@@ -26,11 +21,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const transaksiForm = document.getElementById('transaksi-form');
     const paymentForm = document.getElementById('payment-form');
 
-    // ==========================================================
-    // BAGIAN FUNGSI-FUNGSI UTAMA (DEFINISI DI AWAL)
-    // ==========================================================
-    
-    // Menyiapkan semua event listener
     function setupEventListeners() {
         document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
         document.querySelectorAll('input[name="appMode"]').forEach(toggle => {
@@ -50,7 +40,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('import-excel-input').addEventListener('change', importFromExcel);
     }
 
-    // Memuat data dari Firestore
     function loadAllTransactions() {
         transactionCollection.orderBy('tanggal', 'asc').onSnapshot(snapshot => {
             allTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -63,17 +52,12 @@ window.addEventListener('DOMContentLoaded', () => {
             entityListBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger"><strong>Gagal memuat data.</strong><br><small>Pastikan Indeks Firestore sudah dibuat (Cek F12 -> Console).</small></td></tr>`;
         });
     }
-
-    // ==========================================================
-    // FUNGSI INISIALISASI UTAMA (MEMANGGIL FUNGSI DI ATASNYA)
-    // ==========================================================
     
     function initApp() {
         setupEventListeners();
         loadAllTransactions();
     }
     
-    // --- SISA SEMUA FUNGSI LAINNYA ---
     function updateListTitle() {
         const title = document.getElementById('list-title');
         title.textContent = (currentDisplayMode === 'pembelian') ? 'Daftar Hutang Supplier' : 'Daftar Piutang Customer';
@@ -121,17 +105,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const uniqueNames = [...new Set(allTransactions.map(tx => tx.nama))];
         const datalist = document.getElementById('entity-names-list');
         datalist.innerHTML = '';
-        uniqueNames.forEach(name => {
-            datalist.innerHTML += `<option value="${name}">`;
-        });
+        uniqueNames.forEach(name => { datalist.innerHTML += `<option value="${name}">`; });
     }
 
     window.openDetailsModal = (entityName) => {
         const entityTransactions = allTransactions
             .filter(tx => tx.nama === entityName)
             .sort((a, b) => {
-                const dateA = new Date(a.tanggal);
-                const dateB = new Date(b.tanggal);
+                const dateA = new Date(a.tanggal), dateB = new Date(b.tanggal);
                 if (dateA.getTime() === dateB.getTime()) {
                     const timeA = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
                     const timeB = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
@@ -139,7 +120,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
                 return dateA - dateB;
             });
-
         document.getElementById('details-table-body').innerHTML = '';
         document.getElementById('details-modal-label').textContent = `Detail Transaksi: ${entityName}`;
         let runningBalance = 0;
@@ -149,15 +129,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 debit = (tx.jumlah || 0);
                 runningBalance += (tx.jumlah || 0) - (tx.retur || 0);
                 if (tx.retur > 0) keteranganText += ` (Retur: ${formatCurrency(tx.retur)})`;
-                if (calculateSisaFaktur(tx.id) > 0) actions += `<button class="btn btn-sm btn-success" onclick="openPaymentModal('${tx.id}', '${tx.noFaktur}')" title="Bayar Faktur Ini"><i class="bi bi-cash-coin"></i></button> `;
-                actions += `<button class="btn btn-sm btn-warning" onclick="editFaktur('${tx.id}')" title="Edit Faktur"><i class="bi bi-pencil-fill"></i></button> `;
+                if (calculateSisaFaktur(tx.id) > 0) actions += `<button class="btn btn-sm btn-success" onclick="openPaymentModal('${tx.id}', '${tx.noFaktur}')" title="Bayar"><i class="bi bi-cash-coin"></i></button> `;
+                actions += `<button class="btn btn-sm btn-warning" onclick="editFaktur('${tx.id}')" title="Edit"><i class="bi bi-pencil-fill"></i></button> `;
             } else if (tx.type === 'payment') {
                 kredit = tx.jumlah || 0;
                 keteranganText = tx.metode;
                 if (tx.bank) keteranganText += ` - ${tx.bank}`;
                 if (tx.giroNo) keteranganText += ` - No: ${tx.giroNo}`;
             }
-            actions += `<button class="btn btn-sm btn-danger" onclick="deleteTransaksi('${tx.id}', '${tx.type}')" title="Hapus Transaksi"><i class="bi bi-trash-fill"></i></button>`;
+            actions += `<button class="btn btn-sm btn-danger" onclick="deleteTransaksi('${tx.id}', '${tx.type}')" title="Hapus"><i class="bi bi-trash-fill"></i></button>`;
             const row = `<tr><td>${tx.tanggal}</td><td>${tx.noFaktur || '-'}</td><td>${keteranganText}</td><td>${debit > 0 ? formatCurrency(debit) : '-'}</td><td>${kredit > 0 ? formatCurrency(kredit) : '-'}</td><td class="fw-bold">${formatCurrency(runningBalance)}</td><td>${actions}</td></tr>`;
             document.getElementById('details-table-body').innerHTML += row;
         });
@@ -207,7 +187,8 @@ window.addEventListener('DOMContentLoaded', () => {
             jumlah: parseFloat(document.getElementById('jumlah').value), jatuhTempo: document.getElementById('jatuh-tempo').value,
             retur: parseFloat(document.getElementById('retur').value) || 0, updatedAt: new Date()
         };
-        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
+        const modalEl = document.getElementById('transaksi-modal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
         if (id) {
             transactionCollection.doc(id).update(data).then(() => modalInstance.hide());
         } else {
@@ -235,7 +216,8 @@ window.addEventListener('DOMContentLoaded', () => {
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('payment-modal'));
         transactionCollection.add(paymentData).then(() => {
             modalInstance.hide();
-            const detailsModalInstance = bootstrap.Modal.getInstance(document.getElementById('details-modal'));
+            const detailsModalEl = document.getElementById('details-modal');
+            const detailsModalInstance = bootstrap.Modal.getInstance(detailsModalEl);
             if(detailsModalInstance) detailsModalInstance.hide();
         });
     }
@@ -244,7 +226,8 @@ window.addEventListener('DOMContentLoaded', () => {
         let confirmMsg = 'Apakah Anda yakin ingin menghapus transaksi ini?';
         if (type === 'faktur') confirmMsg = 'Menghapus faktur akan menghapus SEMUA pembayaran terkait. Yakin?';
         if (confirm(confirmMsg)) {
-            const detailsModalInstance = bootstrap.Modal.getInstance(document.getElementById('details-modal'));
+            const detailsModalEl = document.getElementById('details-modal');
+            const detailsModalInstance = bootstrap.Modal.getInstance(detailsModalEl);
             if (type === 'faktur') {
                 const paymentsToDelete = allTransactions.filter(p => p.linkedFakturId === id);
                 const batch = db.batch();
@@ -288,19 +271,15 @@ window.addEventListener('DOMContentLoaded', () => {
         const tglMulai = document.getElementById('report-tgl-mulai').value;
         const tglAkhir = document.getElementById('report-tgl-akhir').value;
         const filtered = allTransactions.filter(tx => (!tglMulai || tx.tanggal >= tglMulai) && (!tglAkhir || tx.tanggal <= tglAkhir));
-        if (filtered.length === 0) return alert('Tidak ada data yang cocok untuk periode yang dipilih.');
+        if (filtered.length === 0) return alert('Tidak ada data yang cocok.');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         doc.text(`Laporan Semua Transaksi`, 14, 15);
         doc.setFontSize(10);
         doc.text(`Periode: ${tglMulai || 'Awal'} - ${tglAkhir || 'Akhir'}`, 14, 20);
-        const body = filtered.map(tx => [
-            tx.tanggal, tx.nama, tx.mode.toUpperCase(), tx.noFaktur || '-',
-            tx.type === 'faktur' ? formatCurrency((tx.jumlah || 0) - (tx.retur || 0)) : '-',
-            tx.type === 'payment' ? formatCurrency(tx.jumlah) : '-'
-        ]);
+        const body = filtered.map(tx => [tx.tanggal, tx.nama, tx.mode.toUpperCase(), tx.noFaktur || '-', tx.type === 'faktur' ? formatCurrency((tx.jumlah || 0) - (tx.retur || 0)) : '-', tx.type === 'payment' ? formatCurrency(tx.jumlah) : '-']);
         doc.autoTable({ startY: 25, head: [['Tanggal', 'Nama', 'Jenis', 'No Faktur', 'Debit', 'Kredit']], body: body });
-        doc.save(`Laporan-Transaksi-${new Date().toISOString().slice(0,10)}.pdf`);
+        doc.save(`Laporan-Transaksi.pdf`);
     }
 
     function exportToExcel() {
@@ -308,10 +287,9 @@ window.addEventListener('DOMContentLoaded', () => {
         const excelData = allTransactions.map(tx => {
             let sisaTagihan = tx.type === 'faktur' ? calculateSisaFaktur(tx.id) : null;
             return {
-                ID_Transaksi: tx.id, Jenis_Transaksi: tx.type, Mode: tx.mode, Nama: tx.nama,
-                Tanggal_Transaksi: tx.tanggal, No_Faktur: tx.noFaktur, Keterangan: tx.keterangan || '',
-                Jumlah_Faktur: tx.type === 'faktur' ? tx.jumlah : '', Retur: tx.type === 'faktur' ? tx.retur : '',
-                Sisa_Tagihan_Faktur: sisaTagihan, Jumlah_Pembayaran: tx.type === 'payment' ? tx.jumlah : '',
+                ID_Transaksi: tx.id, Jenis_Transaksi: tx.type, Mode: tx.mode, Nama: tx.nama, Tanggal_Transaksi: tx.tanggal,
+                No_Faktur: tx.noFaktur, Keterangan: tx.keterangan || '', Jumlah_Faktur: tx.type === 'faktur' ? tx.jumlah : '',
+                Retur: tx.type === 'faktur' ? tx.retur : '', Sisa_Tagihan_Faktur: sisaTagihan, Jumlah_Pembayaran: tx.type === 'payment' ? tx.jumlah : '',
                 Metode_Pembayaran: tx.type === 'payment' ? tx.metode : '', Bank_Transfer: tx.type === 'payment' ? tx.bank || '' : '',
                 No_Giro: tx.type === 'payment' ? tx.giroNo || '' : '', Jatuh_Tempo_Faktur: tx.type === 'faktur' ? tx.jatuhTempo : '',
                 Jatuh_Tempo_Giro: tx.type === 'payment' ? tx.giroDueDate || '' : '', ID_Faktur_Terkait: tx.type === 'payment' ? tx.linkedFakturId : ''
@@ -320,7 +298,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const worksheet = XLSX.utils.json_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Semua Transaksi");
-        XLSX.writeFile(workbook, `Export_Nota_Keuangan_${new Date().toISOString().slice(0,10)}.xlsx`);
+        XLSX.writeFile(workbook, `Export_Nota_Keuangan.xlsx`);
     }
 
     function importFromExcel(e) {
@@ -332,11 +310,9 @@ window.addEventListener('DOMContentLoaded', () => {
                 const workbook = XLSX.read(data, {type: 'array', cellDates:true});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                if (!confirm(`Anda akan mengimpor ${jsonData.length} baris data. Proses ini tidak bisa dibatalkan. Lanjutkan?`)) {
-                    e.target.value = ''; return;
-                }
-                if(jsonData.length > 0 && (!jsonData[0].Jenis_Transaksi || !jsonData[0].Mode || !jsonData[0].Nama || !jsonData[0].Tanggal_Transaksi)) {
-                    alert("Import Gagal! Pastikan file Excel Anda memiliki kolom 'Jenis_Transaksi', 'Mode', 'Nama', dan 'Tanggal_Transaksi'.");
+                if (!confirm(`Impor ${jsonData.length} baris data?`)) { e.target.value = ''; return; }
+                if (jsonData.length > 0 && (!jsonData[0].Jenis_Transaksi || !jsonData[0].Mode || !jsonData[0].Nama || !jsonData[0].Tanggal_Transaksi)) {
+                    alert("Import Gagal! Kolom wajib: 'Jenis_Transaksi', 'Mode', 'Nama', 'Tanggal_Transaksi'.");
                     e.target.value = ''; return;
                 }
                 const batch = db.batch();
@@ -365,7 +341,6 @@ window.addEventListener('DOMContentLoaded', () => {
         reader.readAsArrayBuffer(file);
     }
     
-    // --- PENDAFTARAN SERVICE WORKER (PWA) ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
@@ -374,4 +349,4 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-}); // Penutup untuk event listener DOMContentLoaded
+});
