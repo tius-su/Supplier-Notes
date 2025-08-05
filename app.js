@@ -213,14 +213,20 @@ window.addEventListener('DOMContentLoaded', () => {
             noFaktur: document.getElementById('no-faktur').value, keterangan: document.getElementById('keterangan').value,
             jumlah: parseFloat(document.getElementById('jumlah').value), jatuhTempo: document.getElementById('jatuh-tempo').value,
             retur: parseFloat(document.getElementById('retur').value) || 0, 
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: new Date()
         };
         const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
         if (id) {
-            transactionCollection.doc(id).update(data).then(() => modalInstance.hide());
+            transactionCollection.doc(id).update(data).then(() => modalInstance.hide()).catch(err => {
+                console.error("Error updating transaction: ", err);
+                alert("Gagal memperbarui transaksi.");
+            });
         } else {
-            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            transactionCollection.add(data).then(() => modalInstance.hide());
+            data.createdAt = new Date();
+            transactionCollection.add(data).then(() => modalInstance.hide()).catch(err => {
+                console.error("Error adding transaction: ", err);
+                alert("Gagal menyimpan transaksi baru.");
+            });
         }
     }
 
@@ -240,7 +246,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 tanggal: document.getElementById('payment-date').value,
                 jumlah: parseFloat(row.querySelector('.payment-amount').value) || 0,
                 metode: row.querySelector('.payment-type').value,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: new Date()
             };
             if (paymentData.jumlah <= 0) return;
             if (paymentData.metode === 'Transfer') paymentData.bank = row.querySelector('.transfer-bank').value;
@@ -256,7 +262,10 @@ window.addEventListener('DOMContentLoaded', () => {
             modalInstance.hide();
             const detailsModalInstance = bootstrap.Modal.getInstance(document.getElementById('details-modal'));
             if(detailsModalInstance) detailsModalInstance.hide();
-        }).catch(err => alert('Gagal menyimpan pembayaran.'));
+        }).catch(err => {
+            console.error("Error saving payment: ", err);
+            alert('Gagal menyimpan pembayaran.');
+        });
     }
 
     window.deleteTransaksi = (id, type) => {
@@ -267,11 +276,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 const batch = db.batch();
                 paymentsToDelete.forEach(p => batch.delete(transactionCollection.doc(p.id)));
                 batch.delete(transactionCollection.doc(id));
-                batch.commit().then(() => detailsModalInstance ? detailsModalInstance.hide() : null);
-            } else transactionCollection.doc(id).delete().then(() => detailsModalInstance ? detailsModalInstance.hide() : null);
+                batch.commit().then(() => detailsModalInstance ? detailsModalInstance.hide() : null).catch(err => alert("Gagal menghapus transaksi."));
+            } else {
+                transactionCollection.doc(id).delete().then(() => detailsModalInstance ? detailsModalInstance.hide() : null).catch(err => alert("Gagal menghapus pembayaran."));
+            }
         }
     }
 
+    // FUNGSI YANG DIPERBAIKI
     function saveContact(e) {
         e.preventDefault();
         const contactData = {
@@ -281,7 +293,7 @@ window.addEventListener('DOMContentLoaded', () => {
             email: document.getElementById('contact-email').value,
             address: document.getElementById('contact-address').value, 
             contactPerson: document.getElementById('contact-person').value,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: new Date() // Menggunakan new Date()
         };
         const contactId = document.getElementById('contact-id').value;
         if (contactId) {
@@ -292,7 +304,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 alert("Gagal memperbarui kontak.");
             });
         } else {
-            contactData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            contactData.createdAt = new Date(); // Menggunakan new Date()
             contactsCollection.add(contactData).then(() => {
                 document.getElementById('contact-form').reset();
             }).catch(err => {
