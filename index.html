@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d6efd"/>
+    <link rel="manifest" href="manifest.json">
+
     <title>Dashboard - Nota Keuangan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -10,144 +13,20 @@
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-primary shadow-sm sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">Nota Keuangan</a>
-            <button class="btn btn-danger btn-sm" id="logout-button"><i class="bi bi-box-arrow-right"></i></button>
-        </div>
-    </nav>
-
+    <nav class="navbar navbar-dark bg-primary shadow-sm sticky-top">...</nav>
     <div class="container mt-4 pb-5">
-        
-        <section id="dashboard" class="mb-4">
-            <div class="row">
-                <div class="col-6 mb-3"><div class="card shadow-sm"><div class="card-body"><h6 class="card-subtitle mb-2 text-muted">Total Pembelian</h6><h4 class="card-title text-primary" id="total-pembelian">Rp 0</h4></div></div></div>
-                <div class="col-6 mb-3"><div class="card shadow-sm"><div class="card-body"><h6 class="card-subtitle mb-2 text-muted">Total Penjualan</h6><h4 class="card-title text-success" id="total-penjualan">Rp 0</h4></div></div></div>
-                <div class="col-12 mb-3"><div class="card shadow-sm border-danger"><div class="card-body text-danger"><h6 class="card-subtitle mb-2">Total Faktur Jatuh Tempo</h6><h4 class="card-title" id="total-jatuh-tempo">0 Faktur</h4></div></div></div>
-            </div>
-        </section>
-
-        <section class="card card-body mb-4 shadow-sm">
-            <div class="d-grid gap-2 mb-3">
-                <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#transaksi-modal"><i class="bi bi-plus-circle-fill"></i> Tambah Transaksi Baru</button>
-                <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#report-modal"><i class="bi bi-journal-text"></i> Laporan & Data</button>
-            </div>
-            <input type="text" class="form-control" id="filter-nama" placeholder="Cari nama supplier atau customer...">
-        </section>
-
-        <div class="text-center mb-3">
-             <div class="btn-group" role="group">
-                <input type="radio" class="btn-check" name="appMode" id="mode-pembelian" value="pembelian" autocomplete="off" checked>
-                <label class="btn btn-outline-primary" for="mode-pembelian"><i class="bi bi-cart-fill"></i> Tampilkan Hutang</label>
-                <input type="radio" class="btn-check" name="appMode" id="mode-penjualan" value="penjualan" autocomplete="off">
-                <label class="btn btn-outline-primary" for="mode-penjualan"><i class="bi bi-receipt-cutoff"></i> Tampilkan Piutang</label>
-            </div>
-        </div>
-
+        <section id="dashboard" class="mb-4">...</section>
+        <section class="card card-body mb-4 shadow-sm">...</section>
+        <div class="text-center mb-3">...</div>
         <h4 id="list-title" class="mt-4">Daftar Hutang Supplier</h4>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-dark"><tr><th>Nama</th><th>Total Tagihan</th><th>Aksi</th></tr></thead>
-                <tbody id="entity-list-body"></tbody>
-            </table>
-        </div>
+        <div class="table-responsive">...</div>
     </div>
 
-    <div class="modal fade" id="details-modal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="details-modal-label">Detail Transaksi</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <h5 class="mb-3">Total Sisa Tagihan: <span id="details-total-sisa" class="text-danger"></span></h5>
-                    <div class="table-responsive" style="max-height: 60vh;">
-                        <table class="table table-sm table-striped">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>No Faktur</th>
-                                    <th>Keterangan</th>
-                                    <th>Debit</th>
-                                    <th>Kredit</th>
-                                    <th>Saldo</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="details-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="modal fade" id="transaksi-modal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="transaksi-modal-title">Tambah Faktur Baru</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <form id="transaksi-form">
-                <input type="hidden" id="transaksi-id">
-                <div class="mb-3">
-                    <label for="nama" class="form-label">Nama Supplier/Customer</label>
-                    <input type="text" class="form-control" id="nama" required list="entity-names-list">
-                    <datalist id="entity-names-list"></datalist>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label for="tanggal" class="form-label">Tanggal</label><input type="date" class="form-control" id="tanggal" required></div>
-                    <div class="col-md-6 mb-3"><label for="no-faktur" class="form-label">No Faktur</label><input type="text" class="form-control" id="no-faktur" required></div>
-                </div>
-                <div class="mb-3"><label for="keterangan" class="form-label">Keterangan</label><textarea class="form-control" id="keterangan" rows="2"></textarea></div>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label for="jumlah" class="form-label">Jumlah</label><input type="number" class="form-control" id="jumlah" required></div>
-                    <div class="col-md-6 mb-3"><label for="jatuh-tempo" class="form-label">Tgl Jatuh Tempo</label><input type="date" class="form-control" id="jatuh-tempo"></div>
-                </div>
-                <div class="mb-3"><label for="retur" class="form-label">Retur</label><input type="number" class="form-control" id="retur" value="0"></div>
-                <button type="submit" class="btn btn-primary w-100">Simpan</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal fade" id="payment-modal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Lakukan Pembayaran untuk Faktur <span id="payment-faktur-no"></span></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <p>Sisa Tagihan Faktur Ini: <strong id="sisa-tagihan-payment" class="text-danger"></strong></p>
-            <form id="payment-form">
-                <input type="hidden" id="payment-transaksi-id">
-                <div class="mb-3"><label for="payment-date" class="form-label">Tanggal Bayar</label><input type="date" class="form-control" id="payment-date" required></div>
-                <div class="mb-3"><label for="payment-amount" class="form-label">Jumlah Bayar</label><input type="number" class="form-control" id="payment-amount" required></div>
-                <div class="mb-3">
-                    <label for="payment-type" class="form-label">Jenis Payment</label>
-                    <select class="form-select" id="payment-type">
-                        <option value="Cash">Cash</option>
-                        <option value="Transfer">Transfer</option>
-                        <option value="Giro">Giro</option>
-                    </select>
-                </div>
-                <div id="transfer-details" style="display: none;"><div class="mb-3"><input type="text" class="form-control" id="transfer-bank" placeholder="Contoh: BCA"></div></div>
-                <div id="giro-details" style="display: none;">
-                     <div class="mb-3"><input type="text" class="form-control" id="giro-no" placeholder="Nomor Giro"></div>
-                     <div class="mb-3"><input type="date" class="form-control" id="giro-due-date"></div>
-                </div>
-                <button type="submit" class="btn btn-success w-100">Bayar</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <div class="modal fade" id="details-modal">...</div>
+    <div class="modal fade" id="transaksi-modal">...</div>
+    <div class="modal fade" id="payment-modal">...</div>
+    
     <div class="modal fade" id="report-modal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -163,6 +42,7 @@
                     </div>
                     
                     <div class="d-grid gap-2">
+                        <button class="btn btn-primary" id="view-report-btn"><i class="bi bi-eye-fill"></i> Tampilkan Laporan di Web</button>
                         <button class="btn btn-danger" id="generate-pdf-btn"><i class="bi bi-file-earmark-pdf-fill"></i> Download Laporan PDF</button>
                     </div>
 
@@ -173,19 +53,37 @@
                         <button class="btn btn-success" id="export-excel-btn"><i class="bi bi-file-earmark-excel-fill"></i> Export Semua Data ke Excel</button>
                         <label for="import-excel-input" class="btn btn-info"><i class="bi bi-database-fill-up"></i> Import Data dari Excel</label>
                         <input type="file" id="import-excel-input" style="display: none;" accept=".xlsx, .xls">
-                        <small class="text-muted text-center">Penting: Format kolom di file Excel harus sesuai dengan template.</small>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="modal fade" id="view-report-modal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pratinjau Laporan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm">
+                            <thead id="view-report-head">
+                                </thead>
+                            <tbody id="view-report-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    ...
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <script src="app.js"></script>
