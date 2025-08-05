@@ -364,8 +364,133 @@ window.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsArrayBuffer(file);
     }
+
+    // Letakkan kode ini di bagian FUNGSI MODAL di app.js Anda
+
+// Variabel global untuk melacak nomor metode pembayaran
+let paymentMethodCounter = 0;
+
+// FUNGSI BARU: untuk menambahkan baris metode pembayaran
+function addPaymentMethodRow(amount = 0) {
+    paymentMethodCounter++;
+    const container = document.getElementById('payment-methods-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'payment-method-row card card-body mb-2';
+    newRow.id = `payment-row-${paymentMethodCounter}`;
+    newRow.innerHTML = `
+        <div class="d-flex justify-content-end">
+            <button type="button" class="btn-close" onclick="document.getElementById('payment-row-${paymentMethodCounter}').remove(); updateTotalPaymentDisplay();"></button>
+        </div>
+        <div class="row g-2">
+            <div class="col-md-6">
+                <label class="form-label">Jumlah</label>
+                <input type="number" class="form-control payment-amount" value="${amount}" oninput="updateTotalPaymentDisplay()">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Metode</label>
+                <select class="form-select payment-type" onchange="togglePaymentDetails(this)">
+                    <option value="Cash">Cash</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Giro">Giro</option>
+                </select>
+            </div>
+        </div>
+        <div class="transfer-details mt-2" style="display: none;">
+            <input type="text" class="form-control transfer-bank" placeholder="Contoh: BCA">
+        </div>
+        <div class="giro-details mt-2" style="display: none;">
+            <input type="text" class="form-control giro-no mb-2" placeholder="Nomor Giro">
+            <input type="date" class="form-control giro-due-date">
+        </div>
+    `;
+    container.appendChild(newRow);
+    updateTotalPaymentDisplay();
+}
+
+// FUNGSI BARU: untuk toggle detail per baris
+window.togglePaymentDetails = (selectElement) => {
+    const parentRow = selectElement.closest('.payment-method-row');
+    parentRow.querySelector('.transfer-details').style.display = selectElement.value === 'Transfer' ? 'block' : 'none';
+    parentRow.querySelector('.giro-details').style.display = selectElement.value === 'Giro' ? 'block' : 'none';
+}
+
+// FUNGSI BARU: untuk update total pembayaran
+function updateTotalPaymentDisplay() {
+    const allAmounts = document.querySelectorAll('.payment-amount');
+    let total = 0;
+    allAmounts.forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+    document.getElementById('total-payment-display').textContent = `Rp ${formatCurrency(total)}`;
+}
+
+// UBAH FUNGSI openPaymentModal
+window.openPaymentModal = (fakturId, noFaktur) => {
+    paymentForm.reset();
+    document.getElementById('payment-methods-container').innerHTML = ''; // Kosongkan container
+    paymentMethodCounter = 0; // Reset counter
+
+    document.getElementById('payment-transaksi-id').value = fakturId;
+    document.getElementById('payment-faktur-no').textContent = noFaktur;
+    const sisa = calculateSisaFaktur(fakturId);
+    document.getElementById('sisa-tagihan-payment').textContent = `Rp ${formatCurrency(sisa)}`;
+    document.getElementById('payment-date').value = new Date().toISOString().slice(0, 10);
     
-    // --- PENDAFTARAN SERVICE WORKER (PWA) ---
+    addPaymentMethodRow(sisa); // Tambahkan baris pertama secara otomatis
+    
+    // Tambahkan event listener ke tombol 'Tambah Metode'
+    document.getElementById('add-payment-method-btn').onclick = () => addPaymentMethodRow();
+
+    new bootstrap.Modal(document.getElementById('payment-modal')).show();
+}
+
+// UBAH FUNGSI handlePaymentSubmit
+function handlePaymentSubmit(e) {
+    e.preventDefault();
+    const fakturId = document.getElementById('payment-transaksi-id').value;
+    const fakturAsli = allTransactions.find(tx => tx.id === fakturId);
+    if (!fakturAsli) return alert('Faktur asli tidak ditemukan!');
+
+    const paymentRows = document.querySelectorAll('.payment-method-row');
+    if (paymentRows.length === 0) return alert('Tambahkan minimal satu metode pembayaran.');
+
+    const batch = db.batch();
+    const paymentGroupId = `PAY-${Date.now()}`; // ID unik untuk grup pembayaran ini
+
+    paymentRows.forEach(row => {
+        const paymentData = {
+            mode: fakturAsli.mode, type: 'payment', linkedFakturId: fakturId,
+            paymentGroupId: paymentGroupId, // Tandai bahwa pembayaran ini bagian dari grup
+            noFaktur: fakturAsli.noFaktur, nama: fakturAsli.nama,
+            tanggal: document.getElementById('payment-date').value,
+            jumlah: parseFloat(row.querySelector('.payment-amount').value) || 0,
+            metode: row.querySelector('.payment-type').value,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (paymentData.jumlah <= 0) return; // Lewati jika jumlahnya 0
+
+        if (paymentData.metode === 'Transfer') paymentData.bank = row.querySelector('.transfer-bank').value;
+        if (paymentData.metode === 'Giro') {
+            paymentData.giroNo = row.querySelector('.giro-no').value;
+            paymentData.giroDueDate = row.querySelector('.giro-due-date').value;
+        }
+        
+        const newPaymentRef = transactionCollection.doc(); // Buat referensi dokumen baru
+        batch.set(newPaymentRef, paymentData); // Tambahkan ke batch
+    });
+
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('payment-modal'));
+    batch.commit().then(() => {
+        console.log('Split payment berhasil disimpan!');
+        modalInstance.hide();
+        const detailsModalInstance = bootstrap.Modal.getInstance(document.getElementById('details-modal'));
+        if(detailsModalInstance) detailsModalInstance.hide();
+    }).catch(err => {
+        console.error("Error saving split payment: ", err);
+        alert('Gagal menyimpan pembayaran.');
+    });
+}    // --- PENDAFTARAN SERVICE WORKER (PWA) ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
