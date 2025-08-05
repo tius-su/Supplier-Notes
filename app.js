@@ -490,7 +490,111 @@ function handlePaymentSubmit(e) {
         console.error("Error saving split payment: ", err);
         alert('Gagal menyimpan pembayaran.');
     });
-}    // --- PENDAFTARAN SERVICE WORKER (PWA) ---
+    // Letakkan kode ini di bagian atas app.js, di bawah referensi koleksi lainnya
+
+const contactsCollection = db.collection('contacts');
+let allContacts = []; // Simpan data kontak di sini
+
+// --- Di dalam fungsi setupEventListeners() ---
+// Tambahkan dua event listener ini
+document.getElementById('contact-form').addEventListener('submit', saveContact);
+document.getElementById('cancel-edit-contact-btn').addEventListener('click', () => {
+    document.getElementById('contact-form').reset();
+    document.getElementById('contact-id').value = '';
+    document.getElementById('contact-form-title').textContent = 'Tambah Kontak Baru';
+    document.getElementById('cancel-edit-contact-btn').style.display = 'none';
+});
+
+// --- Di dalam fungsi initApp() ---
+// Tambahkan pemanggilan fungsi ini
+loadContacts();
+
+// --- Tambahkan semua FUNGSI BARU di bawah ini di mana saja di app.js ---
+
+function loadContacts() {
+    contactsCollection.orderBy('name').onSnapshot(snapshot => {
+        allContacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const contactsTableBody = document.getElementById('contacts-table-body');
+        const namaDropdown = document.getElementById('nama-dropdown');
+        
+        contactsTableBody.innerHTML = '';
+        namaDropdown.innerHTML = '<option value="">-- Pilih Supplier/Customer --</option>';
+
+        allContacts.forEach(contact => {
+            // Isi tabel manajemen
+            const row = `
+                <tr>
+                    <td>${contact.name}</td>
+                    <td>${contact.type}</td>
+                    <td>${contact.phone || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editContact('${contact.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteContact('${contact.id}')">Hapus</button>
+                    </td>
+                </tr>`;
+            contactsTableBody.innerHTML += row;
+
+            // Isi dropdown di form transaksi
+            const option = `<option value="${contact.name}">${contact.name} (${contact.type})</option>`;
+            namaDropdown.innerHTML += option;
+        });
+    });
+}
+
+function saveContact(e) {
+    e.preventDefault();
+    const contactData = {
+        name: document.getElementById('contact-name').value,
+        type: document.getElementById('contact-type').value,
+        phone: document.getElementById('contact-phone').value,
+        email: document.getElementById('contact-email').value,
+        address: document.getElementById('contact-address').value,
+        contactPerson: document.getElementById('contact-person').value,
+        updatedAt: new Date()
+    };
+    
+    const contactId = document.getElementById('contact-id').value;
+    if (contactId) { // Mode Edit
+        contactsCollection.doc(contactId).update(contactData).then(() => {
+            document.getElementById('cancel-edit-contact-btn').click(); // Reset form
+        });
+    } else { // Mode Tambah Baru
+        contactData.createdAt = new Date();
+        contactsCollection.add(contactData).then(() => {
+            document.getElementById('contact-form').reset();
+        });
+    }
+}
+
+window.editContact = (id) => {
+    const contact = allContacts.find(c => c.id === id);
+    if (!contact) return;
+
+    document.getElementById('contact-id').value = id;
+    document.getElementById('contact-name').value = contact.name;
+    document.getElementById('contact-type').value = contact.type;
+    document.getElementById('contact-phone').value = contact.phone;
+    document.getElementById('contact-email').value = contact.email;
+    document.getElementById('contact-address').value = contact.address;
+    document.getElementById('contact-person').value = contact.contactPerson;
+
+    document.getElementById('contact-form-title').textContent = 'Edit Kontak';
+    document.getElementById('cancel-edit-contact-btn').style.display = 'block';
+}
+
+window.deleteContact = (id) => {
+    if (confirm('Apakah Anda yakin ingin menghapus kontak ini?')) {
+        contactsCollection.doc(id).delete();
+    }
+}
+
+// --- UBAH FUNGSI handleFakturSubmit ---
+// Ubah satu baris untuk mengambil nama dari dropdown
+// Ganti baris ini:
+// nama: document.getElementById('nama').value.trim(),
+// Menjadi baris ini:
+// nama: document.getElementById('nama-dropdown').value,}    // --- PENDAFTARAN SERVICE WORKER (PWA) ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
