@@ -36,11 +36,10 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     
     <script>
-        // Konfigurasi Firebase Anda
         const firebaseConfig = {
             apiKey: "AIzaSyB8Zoz-zogrRL6IF4R7uhQO16z56coWkxg",
             authDomain: "supplier-notes-36c99.firebaseapp.com",
@@ -50,11 +49,9 @@
             appId: "1:413744415542:web:73cc9f800102ab26ca2997"
         };
 
-        // Inisialisasi Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
 
-        // Proses Login
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
 
@@ -65,7 +62,6 @@
 
             auth.signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    // Berhasil login, arahkan ke halaman utama
                     window.location.href = 'index.html';
                 })
                 .catch((error) => {
