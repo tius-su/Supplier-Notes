@@ -65,6 +65,9 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('is-lunas').addEventListener('change', handleLunasToggle);
         // Event listener untuk tombol tambah pembayaran di modal transaksi baru
         document.getElementById('add-new-payment-method-btn').addEventListener('click', () => addNewPaymentMethodRow());
+
+        // Event listener untuk tab Manajemen Transaksi
+        document.getElementById('manajemen-transaksi-tab').addEventListener('click', renderTransactionTables);
     }
 
     function resetTransaksiForm() {
@@ -122,7 +125,52 @@ window.addEventListener('DOMContentLoaded', () => {
             allTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             updateDashboard();
             renderEntityList();
+            renderTransactionTables(); // Panggil fungsi baru
         }, err => console.error("Error loading transactions:", err));
+    }
+
+    // Fungsi baru untuk merender tabel transaksi hutang dan piutang
+    function renderTransactionTables() {
+        const hutangBody = document.getElementById('hutang-table-body');
+        const piutangBody = document.getElementById('piutang-table-body');
+        
+        hutangBody.innerHTML = '';
+        piutangBody.innerHTML = '';
+
+        const hutangTransactions = allTransactions.filter(tx => tx.mode === 'pembelian' && tx.type === 'faktur');
+        const piutangTransactions = allTransactions.filter(tx => tx.mode === 'penjualan' && tx.type === 'faktur');
+
+        if (hutangTransactions.length > 0) {
+            hutangTransactions.forEach(tx => hutangBody.innerHTML += createTransactionRow(tx));
+        } else {
+            hutangBody.innerHTML = '<tr><td colspan="7" class="text-center">Tidak ada transaksi hutang.</td></tr>';
+        }
+
+        if (piutangTransactions.length > 0) {
+            piutangTransactions.forEach(tx => piutangBody.innerHTML += createTransactionRow(tx));
+        } else {
+            piutangBody.innerHTML = '<tr><td colspan="7" class="text-center">Tidak ada transaksi piutang.</td></tr>';
+        }
+    }
+
+    // Fungsi helper untuk membuat baris tabel transaksi
+    function createTransactionRow(tx) {
+        const sisa = calculateSisaFaktur(tx.id);
+        const status = sisa <= 0 ? '<span class="badge text-bg-success">Lunas</span>' : `<span class="badge text-bg-danger">Sisa: Rp ${formatCurrency(sisa)}</span>`;
+        return `
+            <tr>
+                <td>${tx.tanggal}</td>
+                <td>${tx.noFaktur}</td>
+                <td>${tx.nama}</td>
+                <td>Rp ${formatCurrency(tx.jumlah)}</td>
+                <td>${tx.jatuhTempo || '-'}</td>
+                <td>${status}</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" onclick="editFaktur('${tx.id}')">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTransaksi('${tx.id}', 'faktur')">Hapus</button>
+                </td>
+            </tr>
+        `;
     }
 
     function loadContacts() {
@@ -279,55 +327,7 @@ window.addEventListener('DOMContentLoaded', () => {
             type: 'faktur',
             nama: document.getElementById('nama-dropdown').value,
             tanggal: document.getElementById('tanggal').value,
-            noFaktur: document.getElementById('no-faktur').value,
-            keterangan: document.getElementById('keterangan').value,
-            jumlah: parseFloat(document.getElementById('jumlah').value),
-            retur: parseFloat(document.getElementById('retur').value) || 0,
-            updatedAt: new Date()
-        };
-
-        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('transaksi-modal'));
-
-        if (id) {
-            // Logika untuk edit faktur
-            transactionCollection.doc(id).update(fakturData).then(() => {
-                modalInstance.hide();
-                resetTransaksiForm();
-            }).catch(err => {
-                console.error("Error updating transaction: ", err);
-                alert("Gagal memperbarui transaksi.");
-            });
-        } else {
-            // Logika untuk transaksi baru
-            fakturData.createdAt = new Date();
-            const batch = db.batch();
-            const newFakturRef = transactionCollection.doc();
-            
-            if (isLunas) {
-                fakturData.jatuhTempo = null;
-                
-                const paymentRows = document.querySelectorAll('.new-payment-method-row');
-                if (paymentRows.length === 0) {
-                     alert('Tambahkan minimal satu metode pembayaran.');
-                     return;
-                }
-                
-                let totalPayments = 0;
-                const paymentGroupId = `PAY-${Date.now()}`;
-                paymentRows.forEach(row => {
-                    const paymentAmount = parseFloat(row.querySelector('.new-payment-amount').value) || 0;
-                    if (paymentAmount > 0) {
-                        totalPayments += paymentAmount;
-                        const paymentData = {
-                            mode: fakturData.mode,
-                            type: 'payment',
-                            linkedFakturId: newFakturRef.id,
-                            paymentGroupId: paymentGroupId,
-                            noFaktur: fakturData.noFaktur,
-                            nama: fakturData.nama,
-                            tanggal: fakturData.tanggal,
-                            jumlah: paymentAmount,
-                            metode: row.querySelector('.new-paym    window.openDetailsModal = (entityName) => {
+         window.openDetailsModal = (entityName) => {
         const entityTransactions = allTransactions.filter(tx => tx.nama === entityName).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal) || (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
         const detailsTableBody = document.getElementById('details-table-body');
         detailsTableBody.innerHTML = '';
