@@ -19,7 +19,31 @@
             <button class="btn btn-danger btn-sm" id="logout-button"><i class="bi bi-box-arrow-right"></i></button>
         </div>
     </nav>
-
+    
+    <nav class="navbar navbar-expand bg-white sticky-top p-0 border-bottom">
+        <div class="container-fluid">
+            <ul class="navbar-nav mx-auto text-center nav-justified w-100">
+                <li class="nav-item">
+                    <button class="nav-link btn text-dark" data-bs-toggle="modal" data-bs-target="#transaksi-modal" id="tambah-transaksi-btn">
+                        <i class="bi bi-plus-circle-fill d-block fs-5"></i>
+                        <span class="d-none d-md-inline-block">Tambah Transaksi</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link btn text-dark" data-bs-toggle="modal" data-bs-target="#contacts-modal">
+                        <i class="bi bi-people-fill d-block fs-5"></i>
+                        <span class="d-none d-md-inline-block">Manajemen Kontak</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link btn text-dark" data-bs-toggle="modal" data-bs-target="#report-modal">
+                        <i class="bi bi-journal-text d-block fs-5"></i>
+                        <span class="d-none d-md-inline-block">Laporan & Data</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
     <div class="container mt-4 pb-5">
         
         <ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -42,11 +66,6 @@
                 </section>
         
                 <section class="card card-body mb-4 shadow-sm">
-                    <div class="d-grid gap-2 mb-3">
-                        <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#transaksi-modal" id="tambah-transaksi-btn"><i class="bi bi-plus-circle-fill"></i> Tambah Transaksi Baru</button>
-                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#contacts-modal"><i class="bi bi-people-fill"></i> Manajemen Kontak</button>
-                        <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#report-modal"><i class="bi bi-journal-text"></i> Laporan & Data</button>
-                    </div>
                     <input type="text" class="form-control" id="filter-nama" placeholder="Cari nama supplier atau customer...">
                 </section>
         
